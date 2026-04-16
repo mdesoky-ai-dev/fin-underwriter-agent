@@ -140,18 +140,6 @@ def build_dev_graph():
     from langgraph.checkpoint.memory import MemorySaver
     return build_graph(checkpointer=MemorySaver())
 
-
 def build_prod_graph():
-    """
-    Builds the graph with a PostgreSQL checkpointer.
-    Use this for production — state persists across restarts.
-    Requires DATABASE_URL in .env.
-    """
-    from langgraph.checkpoint.postgres import PostgresSaver
-    db_url = os.getenv("DATABASE_URL")
-    if not db_url:
-        raise ValueError("DATABASE_URL must be set in .env for production graph")
-
-    with PostgresSaver.from_conn_string(db_url) as checkpointer:
-        checkpointer.setup()  # Creates checkpoint tables if they don't exist
-        return build_graph(checkpointer=checkpointer)
+    from db.checkpointer import get_prod_checkpointer
+    return build_graph(checkpointer=get_prod_checkpointer())

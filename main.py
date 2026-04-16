@@ -35,7 +35,7 @@ structlog.configure(
 )
 log = structlog.get_logger()
 
-from graph.workflow import build_dev_graph
+from graph.workflow import build_dev_graph, build_prod_graph
 from graph.state import RiskAssessmentState
 from models.application import (
     SMBLoanApplication, LoanPurpose, BusinessStructure, OwnerDemographics
@@ -138,7 +138,7 @@ SCENARIOS = {
 # Main runner
 # ---------------------------------------------------------------------------
 
-def run(scenario_name: str = "moderate"):
+def run(scenario_name: str = "moderate", use_prod: bool = False):
     application = SCENARIOS.get(scenario_name)
     if not application:
         raise ValueError(f"Unknown scenario '{scenario_name}'. Choose from: {list(SCENARIOS.keys())}")
@@ -153,7 +153,7 @@ def run(scenario_name: str = "moderate"):
     )
 
     # Build the graph (in-memory checkpointer for dev)
-    app = build_dev_graph()
+    app = build_prod_graph() if use_prod else build_dev_graph()
 
     # Initial state — application is pre-loaded
     initial_state = RiskAssessmentState(application=application)
@@ -207,5 +207,10 @@ if __name__ == "__main__":
         default="moderate",
         help="Test scenario to run"
     )
+    parser.add_argument(
+        "--prod",
+        action="store_true",
+        help="Use PostgreSQL checkpointer instead of in-memory"
+    )
     args = parser.parse_args()
-    run(args.scenario)
+    run(args.scenario, args.prod)
