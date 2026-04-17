@@ -3,6 +3,7 @@ langchain==0.3.20
 langchain-aws==0.2.10
 langchain-community==0.3.19
 langsmith==0.3.11
+langgraph-checkpoint-postgres
 boto3==1.35.74
 botocore==1.35.74
 pydantic==2.13.2

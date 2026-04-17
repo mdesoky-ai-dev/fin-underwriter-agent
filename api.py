@@ -151,7 +151,6 @@ def run_assessment(application: SMBLoanApplication, use_prod_db: bool):
         "status": "error",
         "error": str(e),
         "completed_at": datetime.now(timezone.utc).isoformat(),
-
         })
 
 
