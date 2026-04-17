@@ -73,7 +73,7 @@ class AssessmentRequest(BaseModel):
     Accepts the full loan application data.
     """
     application: SMBLoanApplication
-    use_prod_db: bool = False   # if True, uses PostgreSQL checkpointer
+    use_prod_db: bool = True   # if True, uses PostgreSQL checkpointer
 
 
 class AssessmentStatus(BaseModel):
