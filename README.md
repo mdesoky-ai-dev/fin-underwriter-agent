@@ -2,6 +2,10 @@
 
 An autonomous multi-agent system that conducts financial risk assessments for small and medium business (SMB) working capital loans. The system uses a self-auditing critic loop to verify findings against Basel III capital standards and CFPB fair lending regulations before producing a final decision.
 
+Live API:  https://fin-underwriter-agent.onrender.com
+Docs:      https://fin-underwriter-agent.onrender.com/docs
+Health:    https://fin-underwriter-agent.onrender.com/health
+
 ---
 
 ## Architecture
