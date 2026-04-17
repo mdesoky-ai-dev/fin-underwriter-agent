@@ -144,10 +144,14 @@ def run_assessment(application: SMBLoanApplication, use_prod_db: bool):
         })
 
     except Exception as e:
+        import traceback
+        print(f"WORKFLOW ERROR: {str(e)}")
+        print(traceback.format_exc())
         assessment_store[app_id].update({
-            "status": "error",
-            "error": str(e),
-            "completed_at": datetime.now(timezone.utc).isoformat(),
+        "status": "error",
+        "error": str(e),
+        "completed_at": datetime.now(timezone.utc).isoformat(),
+
         })
 
 
