@@ -58,7 +58,7 @@ mcp = FastMCP(
 
 # Base URL of your FastAPI server
 # Change to your Render URL when deployed
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = "https://fin-underwriter-agent.onrender.com"
 
 
 # ---------------------------------------------------------------------------
