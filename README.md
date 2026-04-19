@@ -2,9 +2,10 @@
 
 An autonomous multi-agent system that conducts financial risk assessments for small and medium business (SMB) working capital loans. The system uses a self-auditing critic loop to verify findings against Basel III capital standards and CFPB fair lending regulations before producing a final decision.
 
-Live API:  https://fin-underwriter-agent.onrender.com
-Docs:      https://fin-underwriter-agent.onrender.com/docs
-Health:    https://fin-underwriter-agent.onrender.com/health
+**Live Dashboard:** https://smb-risk-agent.netlify.app
+**Live API:** https://fin-underwriter-agent.onrender.com
+**API Docs:** https://fin-underwriter-agent.onrender.com/docs
+**Health:** https://fin-underwriter-agent.onrender.com/health
 
 ---
 
@@ -38,13 +39,19 @@ critic_node             Amazon Nova Pro via AWS Bedrock
 
 **Autonomous critic loop** — the audit agent rejects and retries flawed assessments rather than passing bad output downstream. Failed audits inject specific feedback back into the assessment prompt so the model can self-correct.
 
-**ECOA demographic firewall** — owner demographic data (race, ethnicity, sex) is collected for CFPB Section 1071 compliance but cryptographically excluded from the credit decision. The critic verifies this firewall held on every run.
+**ECOA demographic firewall** — owner demographic data (race, ethnicity, sex) is collected for CFPB Section 1071 compliance but excluded from the credit decision. The critic verifies this firewall held on every run.
 
 **Basel III Standardized Approach** — risk weights, expected loss, and capital requirements are computed and validated against regulatory thresholds. The critic catches any internal inconsistencies in the LLM's math.
 
 **Pydantic schema validation** — every LLM output is validated against a strict schema before it touches the state. Score/category mismatches, missing conditions, and inconsistent calculations are caught at the boundary, not downstream.
 
 **Full observability** — every node, token, and agent message is traced in LangSmith. Every state transition is checkpointed to PostgreSQL so workflows survive restarts.
+
+**MCP integration** — the system is accessible as a Claude Desktop tool via MCP, allowing loan officers to run assessments through natural language conversation.
+
+**REST API** — FastAPI wrapper with async workflow execution, status polling, and structured JSON responses. Deployed on Render.
+
+**Loan officer dashboard** — financial terminal UI deployed on Netlify with three pre-loaded test scenarios and live Basel III metrics display.
 
 ---
 
@@ -56,8 +63,11 @@ critic_node             Amazon Nova Pro via AWS Bedrock
 | Risk assessment LLM | Claude 3.7 Sonnet (AWS Bedrock) | Financial reasoning and risk scoring |
 | Audit LLM | Amazon Nova Pro (AWS Bedrock) | Cost-efficient compliance verification |
 | Data validation | Pydantic v2 | Schema enforcement and cross-field validation |
-| State persistence | PostgreSQL + LangGraph checkpointer | Crash-resilient workflow resumption |
+| State persistence | PostgreSQL + LangGraph checkpointer (Neon) | Crash-resilient workflow resumption |
 | Observability | LangSmith | Full agent trace, token usage, latency per node |
+| REST API | FastAPI + Uvicorn | Async HTTP wrapper, deployed on Render |
+| MCP server | MCP SDK (FastMCP) | Claude Desktop tool integration |
+| Frontend | HTML/CSS/JS | Loan officer dashboard, deployed on Netlify |
 | Structured logging | structlog | JSON-formatted logs at every node |
 
 ---
@@ -100,8 +110,16 @@ fin-underwriter-agent/
 │   ├── assessment.py           RiskAssessmentOutput + BaselIIIMetrics schemas
 │   └── audit.py                AuditResult + BaselIIIAudit + CFPBAudit schemas
 │
-├── main.py                     Entry point with three test scenarios
-├── requirements.txt
+├── db/
+│   └── checkpointer.py         PostgreSQL checkpointer (Neon)
+│
+├── agent-fe/
+│   └── index.html              Loan officer dashboard (deployed on Netlify)
+│
+├── api.py                      FastAPI REST API (deployed on Render)
+├── mcp_server.py               MCP server for Claude Desktop
+├── main.py                     CLI entry point with three test scenarios
+├── requirements-backend.txt
 └── .env.example
 ```
 
@@ -119,9 +137,9 @@ fin-underwriter-agent/
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/fin-underwriter-agent.git
+git clone https://github.com/mdesoky-ai-dev/fin-underwriter-agent.git
 cd fin-underwriter-agent
-pip install -r requirements.txt
+pip install -r requirements-backend.txt
 cp .env.example .env
 ```
 
@@ -138,20 +156,31 @@ BEDROCK_AUDIT_MODEL=amazon.nova-pro-v1:0
 LANGCHAIN_API_KEY=your_langsmith_key
 LANGCHAIN_TRACING_V2=true
 LANGCHAIN_PROJECT=smb-risk-agent
+DATABASE_URL=your_neon_connection_string
 MAX_CRITIC_RETRIES=3
 ```
 
 ### Running
 
 ```bash
-# Moderate risk — approve with conditions
+# CLI — moderate risk scenario (dev mode, in-memory checkpointer)
 python main.py
 
-# Strong financials — clean approval
+# CLI — strong financials
 python main.py --scenario strong
 
-# Critical risk — decline
+# CLI — critical risk decline
 python main.py --scenario decline
+
+# CLI — production mode with PostgreSQL checkpointer
+python main.py --prod
+
+# REST API
+uvicorn api:app --reload --port 8000
+# then open http://localhost:8000/docs
+
+# MCP server (requires api.py running)
+python mcp_server.py
 ```
 
 ---
@@ -213,13 +242,23 @@ COMPLIANCE AUDIT
 
 **Why PostgreSQL checkpointing?** Financial workflows must be resumable. If the system crashes between the assessment and audit nodes, the application should not be re-assessed from scratch — that could produce a different decision. Checkpointing guarantees exactly-once semantics per application.
 
+**Why boto3 over LangChain's ChatBedrock?** Direct boto3 calls give explicit control over every API parameter and response format. In a regulated financial system, predictable behavior and full visibility into the request/response cycle is more important than provider portability.
+
+**Why MCP?** MCP transforms the system from a developer tool into something any employee can access through natural language. A loan officer can request an assessment by describing the applicant in plain English — Claude handles data extraction and tool orchestration transparently.
+
 ---
 
 ## Roadmap
 
-- [ ] PostgreSQL production checkpointer
-- [ ] Explicit guardrails module (Basel III + CFPB rule functions)
-- [ ] REST API wrapper (FastAPI)
-- [ ] Frontend dashboard for loan officers
+- [x] Multi-agent LangGraph workflow
+- [x] Basel III + CFPB compliance audit with critic loop
+- [x] Pydantic schema validation at every node boundary
+- [x] PostgreSQL checkpointer (Neon) for production persistence
+- [x] LangSmith observability
+- [x] FastAPI REST API deployed on Render
+- [x] MCP server for Claude Desktop integration
+- [x] Loan officer dashboard deployed on Netlify
+- [ ] Guardrails module — explicit Basel III + CFPB rule functions
 - [ ] Batch processing for portfolio-level risk assessment
 - [ ] Additional regulatory frameworks (FFIEC, CRA)
+- [ ] Deploy MCP server publicly for web-based Claude integration
