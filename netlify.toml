@@ -1,0 +1,3 @@
+[build]
+  publish = "agent-fe"
+  command = ""
